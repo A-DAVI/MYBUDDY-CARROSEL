@@ -15,7 +15,9 @@ async function renderFrame(preview: Preview, index: number): Promise<HTMLCanvasE
 
   // O wrapper .frame-scaler aplica o transform; o frame interno é 1080×1350.
   const scaler = frame.closest<HTMLElement>(".frame-scaler")
-  const original = scaler?.style.cssText ?? ""
+  const mount = frame.closest<HTMLElement>(".frame-mount")
+  const scalerOriginal = scaler?.style.cssText ?? ""
+  const mountOriginal = mount?.style.cssText ?? ""
 
   // Move o scaler pra fora da viewport e remove o scale para o html2canvas
   // pegar as dimensões reais sem cortes.
@@ -24,6 +26,17 @@ async function renderFrame(preview: Preview, index: number): Promise<HTMLCanvasE
       position: absolute;
       top: -99999px;
       left: -99999px;
+      width: 1080px;
+      height: 1350px;
+      transform: none;
+    `
+  }
+
+  if (mount) {
+    mount.style.cssText = `
+      position: absolute;
+      top: 0;
+      left: 0;
       width: 1080px;
       height: 1350px;
       transform: none;
@@ -47,7 +60,8 @@ async function renderFrame(preview: Preview, index: number): Promise<HTMLCanvasE
       ignoreElements: (el: Element) => el instanceof HTMLElement && el.dataset.noExport === "",
     })
   } finally {
-    if (scaler) scaler.style.cssText = original
+    if (scaler) scaler.style.cssText = scalerOriginal
+    if (mount) mount.style.cssText = mountOriginal
   }
 }
 
