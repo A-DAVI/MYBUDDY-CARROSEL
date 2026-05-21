@@ -1,4 +1,6 @@
 node_modules
+.env.local
+.vercel
 dist
 # JS compilados pelo tsc (o Vite usa os .ts diretamente via esbuild)
 src/**/*.js

@@ -1,10 +1,14 @@
-// Integração com a API da Anthropic (claude-haiku — rápido e barato pra geração de texto).
-// A chave fica no localStorage do usuário — nunca vai pra nenhum servidor nosso.
-// A API da Anthropic aceita chamadas diretas do browser com o header abaixo.
+// Integração com a API da Anthropic via proxy Vercel (/api/claude).
+// Chamadas vão para a Edge Function server-side — sem CORS, sem expor a chave no browser.
+//
+// Chave de API (em ordem de prioridade):
+//   1. Variável ANTHROPIC_API_KEY configurada no dashboard da Vercel (produção)
+//   2. Chave inserida pelo usuário na sidebar (enviada como header ao proxy, para dev local)
 
 import { EditorState, Slide2Layout } from '../state'
 
-const API_URL = 'https://api.anthropic.com/v1/messages'
+// em dev local sem vercel dev, aponta pro mesmo origin (Vite serve tudo)
+const PROXY_URL = '/api/claude'
 const MODEL = 'claude-haiku-4-5-20251001'
 const KEY_STORAGE = 'mybuddy-anthropic-key'
 
@@ -23,15 +27,15 @@ export function clearApiKey(): void {
 // ===== CHAMADA BASE =====
 
 async function callClaude(apiKey: string, prompt: string): Promise<string> {
-  const res = await fetch(API_URL, {
+  const headers: Record<string, string> = { 'content-type': 'application/json' }
+
+  // passa a chave como override quando o usuário a inseriu manualmente
+  // (na Vercel de produção, a env var ANTHROPIC_API_KEY torna isso desnecessário)
+  if (apiKey) headers['x-api-key-override'] = apiKey
+
+  const res = await fetch(PROXY_URL, {
     method: 'POST',
-    headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-      // permite chamadas diretas do browser — implica que o dev conhece o risco
-      'anthropic-dangerous-allow-browser': 'true',
-    },
+    headers,
     body: JSON.stringify({
       model: MODEL,
       max_tokens: 1024,
