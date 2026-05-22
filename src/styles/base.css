@@ -36,6 +36,7 @@ body[data-view="not-found"] #app {
   background: rgba(0,0,0,0.15);
   overflow: hidden;
 }
+.frame-scaler--story { height: calc(1920px * var(--scale)); }
 
 .frame-mount {
   position: absolute;
@@ -45,9 +46,10 @@ body[data-view="not-found"] #app {
   transform-origin: top left;
   transform: scale(var(--scale));
 }
+.frame-mount--story { height: 1920px; }
 
-/* a .frame em si: o layout define width/height/padding via seu CSS, mas
-   damos um fallback sane caso o layout esqueça. */
+/* a .frame em si: o layout define width/height via seu CSS;
+   fallback pra carousel. */
 .frame {
   width: 1080px;
   height: 1350px;
@@ -79,7 +81,7 @@ body[data-view="not-found"] #app {
 /* Tamanhos em px de export (1080×1350). O scaler reduz proporcionalmente. */
 
 .mb-logo {
-  font-family: var(--font-brand);
+  font-family: var(--font-heading);
   font-weight: 600;
   color: var(--orange);
   font-size: 66px;
@@ -94,7 +96,7 @@ body[data-view="not-found"] #app {
   background: var(--ink);
   color: var(--bg);
   border-radius: 150px;
-  font-family: var(--font-brand);
+  font-family: var(--font-heading);
   font-size: 33px;
   font-weight: 500;
 }
@@ -128,6 +130,6 @@ body[data-view="not-found"] #app {
   gap: 16px;
   text-align: center;
 }
-.not-found h1 { font-family: var(--font-brand); color: var(--orange); font-size: 48px; }
+.not-found h1 { font-family: var(--font-heading); color: var(--orange); font-size: 48px; }
 .not-found code { background: var(--shell-panel); padding: 2px 6px; border-radius: 3px; }
 .not-found .export-btn { max-width: 280px; }

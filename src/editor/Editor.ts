@@ -3,6 +3,7 @@
 
 import type { Layout } from "../core/types"
 import { LayoutStore } from "../core/state"
+import { TypographyStore } from "../core/typography"
 import { colors } from "../core/colors"
 import { handle } from "../core/handle"
 import { Sidebar } from "./Sidebar"
@@ -13,6 +14,7 @@ const STYLE_TAG_ID = "layout-styles"
 
 export class Editor {
   private store: LayoutStore
+  private typography: TypographyStore
   private sidebar: Sidebar | null = null
   private preview: Preview | null = null
   private unsubscribers: Array<() => void> = []
@@ -23,10 +25,14 @@ export class Editor {
     private onBackToGallery: () => void,
   ) {
     this.store = new LayoutStore(layout)
+    this.typography = new TypographyStore(layout.id, layout.defaultTypography)
   }
 
   mount(): void {
     this.injectLayoutStyles()
+    const isStory = this.layout.format === "story"
+    const dims = isStory ? "1080×1920" : "1080×1350"
+
     this.appRoot.innerHTML = `
       <aside class="sidebar" id="sidebar-host"></aside>
       <main class="main">
@@ -36,8 +42,13 @@ export class Editor {
           </button>
           <div>
             <h2>${this.layout.name}</h2>
-            <p>preview ao vivo · 1080×1350</p>
+            <p>preview ao vivo · ${dims}</p>
           </div>
+          ${isStory ? `
+            <button class="safe-zone-toggle" id="safe-zone-toggle" title="Mostrar/ocultar áreas cobertas pelo Instagram">
+              🛡 safe zone
+            </button>
+          ` : ""}
         </div>
         <div class="sidebar-overlay" id="sidebar-overlay"></div>
         <div class="carousel" id="preview-host"></div>
@@ -51,6 +62,7 @@ export class Editor {
     this.sidebar = new Sidebar(
       sidebarHost,
       this.store,
+      this.typography,
       this.onBackToGallery,
       () => exportAll(this.preview!, this.store.layout),
       () => exportZip(this.preview!, this.store.layout),
@@ -60,17 +72,16 @@ export class Editor {
     this.sidebar.render()
     this.preview.render()
 
-    // Qualquer mudança em store/colors/handle → re-renderiza o preview.
-    // (a sidebar não re-renderiza inteira a cada keystroke pra manter o foco do input;
-    // só os botões "remover imagem" e "reset" chamam render() explícito.)
     this.unsubscribers.push(
       this.store.subscribe(() => this.preview!.render()),
       colors.subscribe(() => this.preview!.render()),
       handle.subscribe(() => this.preview!.render()),
+      this.typography.subscribe(() => this.preview!.render()),
     )
 
     this.initSidebarToggle()
     this.initKeyboardShortcuts()
+    if (isStory) this.initSafeZoneToggle()
   }
 
   unmount(): void {
@@ -116,6 +127,18 @@ export class Editor {
     }
     toggle.addEventListener("click", () => sidebar.classList.contains("open") ? close() : open())
     overlay.addEventListener("click", close)
+  }
+
+  private initSafeZoneToggle(): void {
+    const btn = this.appRoot.querySelector<HTMLButtonElement>("#safe-zone-toggle")
+    const previewHost = this.appRoot.querySelector<HTMLElement>("#preview-host")
+    if (!btn || !previewHost) return
+    let active = false
+    btn.addEventListener("click", () => {
+      active = !active
+      previewHost.classList.toggle("show-safe-zones", active)
+      btn.classList.toggle("active", active)
+    })
   }
 
   private initKeyboardShortcuts(): void {

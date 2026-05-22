@@ -9,7 +9,12 @@ export const dadoDestaque: Layout = {
   id: "dado-destaque",
   name: "Dado em destaque",
   description: "1 slide único — número gigante + texto curto. Pronto pra viralizar.",
+  format: "carousel",
   category: "estatística",
+  defaultTypography: {
+    heading: { family: "DynaPuff", weight: 700 },
+    body: { family: "Inter", weight: 400 },
+  },
 
   slides: [
     {
@@ -80,14 +85,14 @@ export const dadoDestaque: Layout = {
 
     .dd-body { flex: 1; display: flex; flex-direction: column; justify-content: center; z-index: 1; }
     .dd-eyebrow {
-      font-family: var(--font-brand);
+      font-family: var(--font-heading);
       font-size: 48px;
       color: var(--ink);
       opacity: 0.7;
       margin-bottom: 24px;
     }
     .dd-number {
-      font-family: var(--font-brand);
+      font-family: var(--font-heading);
       font-weight: 700;
       font-size: 360px;
       line-height: 0.95;
@@ -103,7 +108,7 @@ export const dadoDestaque: Layout = {
       margin-bottom: 48px;
     }
     .dd-statement {
-      font-family: var(--font-brand);
+      font-family: var(--font-heading);
       font-weight: 500;
       font-size: 54px;
       line-height: 1.25;
@@ -123,6 +128,6 @@ export const dadoDestaque: Layout = {
       border-top: 3px solid rgba(26,24,21,0.12);
       padding-top: 42px;
     }
-    .dd-cta { font-family: var(--font-brand); font-size: 36px; color: var(--ink); opacity: 0.7; }
+    .dd-cta { font-family: var(--font-heading); font-size: 36px; color: var(--ink); opacity: 0.7; }
   `,
 }

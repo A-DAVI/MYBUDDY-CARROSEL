@@ -1,15 +1,17 @@
 // Sidebar dinâmica: gera todos os inputs a partir do Layout ativo.
-// Cobre 3 grupos: paleta global, handle, e os fields de cada slide.
+// Cobre grupos: sessão, paleta global, handle, tipografia e fields de cada slide.
 
 import type { Layout } from "../core/types"
 import type { LayoutStore } from "../core/state"
+import type { TypographyStore } from "../core/typography"
 import { colors, DEFAULT_COLORS } from "../core/colors"
 import { handle } from "../core/handle"
+import { CURATED_FONTS, customFonts, preloadCuratedFonts } from "../core/typography"
+import { loadGoogleFont, validateGoogleFont } from "../core/fontLoader"
 import { renderField, bindImageFields } from "./fields"
 import { renderColorField } from "./fields/ColorField"
 import { esc } from "../core/template"
 
-// ID do input: só precisa ser único dentro da sidebar.
 function inputIdFor(slideId: string, fieldId: string): string {
   return `f-${slideId}-${fieldId}`
 }
@@ -18,6 +20,7 @@ export class Sidebar {
   constructor(
     private root: HTMLElement,
     private store: LayoutStore,
+    private typo: TypographyStore,
     private onBackToGallery: () => void,
     private onExportAll: () => void,
     private onExportZip: () => void,
@@ -57,6 +60,11 @@ export class Sidebar {
       </div>
 
       <div class="editor-section">
+        <h3>🔤 tipografia</h3>
+        ${this.renderTypographyPanel()}
+      </div>
+
+      <div class="editor-section">
         <h3>📱 handle</h3>
         <div class="field">
           <label for="input-handle">usuário Instagram</label>
@@ -69,15 +77,15 @@ export class Sidebar {
       <div class="editor-section">
         <h3>📤 exportar</h3>
         <div class="export-section">
-          <button class="export-btn" id="btn-export-all">📥 baixar todos (1080×1350)</button>
-          <button class="export-btn" id="btn-export-zip">🗜 baixar ZIP (${layout.slides.length} ${layout.slides.length === 1 ? "slide" : "slides"})</button>
+          <button class="export-btn" id="btn-export-all">📥 baixar todos</button>
+          <button class="export-btn" id="btn-export-zip">🗜 baixar ZIP (${layout.slides.length} ${layout.slides.length === 1 ? "frame" : "frames"})</button>
           ${layout.slides.map((s, i) => `
             <button class="export-btn secondary small" data-export-slide="${i}">
               ${i + 1}. ${esc(s.label)}
             </button>
           `).join("")}
         </div>
-        <p class="info-box">💡 PNGs em 1080×1350 prontos pro Instagram (4:5).<br>Use <strong>Ctrl+E</strong> pra exportar todos.</p>
+        <p class="info-box">💡 PNGs prontos pro Instagram.<br>Use <strong>Ctrl+E</strong> pra exportar todos.</p>
       </div>
     `
 
@@ -103,6 +111,58 @@ export class Sidebar {
     ).join("")
   }
 
+  private renderTypographyPanel(): string {
+    const t = this.typo.get()
+    const allFamilies = [
+      ...CURATED_FONTS.map(f => f.family),
+      ...customFonts.get(),
+    ]
+    const weightOptions = [400, 500, 600, 700]
+      .map(w => `<option value="${w}" ${w === t.heading.weight ? "selected" : ""}>${w}</option>`)
+      .join("")
+    const bodyWeightOptions = [400, 500, 600, 700]
+      .map(w => `<option value="${w}" ${w === t.body.weight ? "selected" : ""}>${w}</option>`)
+      .join("")
+    const familyOpts = (current: string) => allFamilies
+      .map(f => `<option value="${esc(f)}" ${f === current ? "selected" : ""}>${esc(f)}</option>`)
+      .join("")
+
+    return `
+      <div class="field">
+        <label>heading (títulos)</label>
+        <div class="font-row">
+          <select class="font-family-select" data-typo-role="heading-family">
+            ${familyOpts(t.heading.family)}
+          </select>
+          <select class="font-weight-select" data-typo-role="heading-weight">
+            ${weightOptions}
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>body (texto corrido)</label>
+        <div class="font-row">
+          <select class="font-family-select" data-typo-role="body-family">
+            ${familyOpts(t.body.family)}
+          </select>
+          <select class="font-weight-select" data-typo-role="body-weight">
+            ${bodyWeightOptions}
+          </select>
+        </div>
+      </div>
+      <div class="font-actions">
+        <button class="link-btn" id="btn-load-fonts">carregar prévia das fontes</button>
+        <button class="link-btn" id="btn-add-custom-font">+ fonte custom</button>
+        <button class="link-btn" id="btn-reset-typo">restaurar padrão</button>
+      </div>
+      <div class="custom-font-form" id="custom-font-form" hidden>
+        <input type="text" id="custom-font-input" placeholder="ex: Pacifico">
+        <button class="export-btn secondary small" id="btn-confirm-custom-font">adicionar</button>
+        <p class="field-hint">nome exato do Google Fonts</p>
+      </div>
+    `
+  }
+
   private renderSlideSection(
     slide: Layout["slides"][number],
     index: number,
@@ -113,7 +173,6 @@ export class Sidebar {
       return renderField(f, v, inputIdFor(slide.id, f.id))
     }).join("")
 
-    // data-slide-id é lido pelos listeners pra saber a qual slide pertence o input.
     return `
       <div class="editor-section" data-slide-id="${esc(slide.id)}">
         <h3><span class="num">${index + 1}</span> ${esc(slide.label)}</h3>
@@ -125,7 +184,6 @@ export class Sidebar {
   // ===== LISTENERS =====
 
   private attachListeners(): void {
-    // voltar para galeria
     this.root.querySelector("#btn-back-gallery")?.addEventListener("click", () => {
       this.onBackToGallery()
     })
@@ -146,8 +204,36 @@ export class Sidebar {
     const handleInput = this.root.querySelector<HTMLInputElement>("#input-handle")
     handleInput?.addEventListener("input", () => handle.set(handleInput.value))
 
-    // fields dos slides — text/textarea/richtext/select
-    // Lê data-field (fieldId) e sobe ao [data-slide-id] mais próximo (slideId).
+    // tipografia
+    this.root.querySelectorAll<HTMLSelectElement>("[data-typo-role]").forEach(sel => {
+      sel.addEventListener("change", () => this.handleTypoChange(sel))
+    })
+    this.root.querySelector("#btn-load-fonts")?.addEventListener("click", async () => {
+      await preloadCuratedFonts()
+      // reload current custom fonts too
+      for (const f of customFonts.get()) await loadGoogleFont(f, [400, 700])
+    })
+    this.root.querySelector("#btn-add-custom-font")?.addEventListener("click", () => {
+      const form = this.root.querySelector<HTMLElement>("#custom-font-form")
+      if (form) form.hidden = !form.hidden
+    })
+    this.root.querySelector("#btn-confirm-custom-font")?.addEventListener("click", async () => {
+      const input = this.root.querySelector<HTMLInputElement>("#custom-font-input")
+      const family = input?.value.trim()
+      if (!family) return
+      const valid = await validateGoogleFont(family)
+      if (!valid) {
+        alert(`Fonte "${family}" não encontrada no Google Fonts. Confira o nome exato.`)
+        return
+      }
+      customFonts.add(family)
+      this.render()
+    })
+    this.root.querySelector("#btn-reset-typo")?.addEventListener("click", () => {
+      this.typo.reset(this.store.layout.defaultTypography)
+    })
+
+    // fields dos slides
     this.root.querySelectorAll<HTMLElement>("[data-slide-id] [data-field]").forEach(el => {
       if (el.tagName === "INPUT" && (el as HTMLInputElement).type === "color") return
       if (el.tagName === "INPUT" && (el as HTMLInputElement).type === "file") return
@@ -155,7 +241,7 @@ export class Sidebar {
       el.addEventListener("change", () => this.handleFieldChange(el))
     })
 
-    // image fields — slideId e fieldId vêm diretamente do DOM (via data-slide-id e data-field)
+    // image fields
     bindImageFields(
       this.root,
       (slideId, fieldId, dataUrl) => {
@@ -187,6 +273,22 @@ export class Sidebar {
         this.wrapExport(() => Promise.resolve(this.onExportSlide(idx)))
       })
     })
+  }
+
+  private handleTypoChange(sel: HTMLSelectElement): void {
+    const role = sel.dataset.typoRole!
+    const val = sel.value
+    if (role === "heading-family") {
+      loadGoogleFont(val, [400, 500, 600, 700]).catch(() => {})
+      this.typo.setHeading({ family: val })
+    } else if (role === "heading-weight") {
+      this.typo.setHeading({ weight: parseInt(val, 10) as 400 | 500 | 600 | 700 })
+    } else if (role === "body-family") {
+      loadGoogleFont(val, [400, 500, 600, 700]).catch(() => {})
+      this.typo.setBody({ family: val })
+    } else if (role === "body-weight") {
+      this.typo.setBody({ weight: parseInt(val, 10) as 400 | 500 | 600 | 700 })
+    }
   }
 
   private handleFieldChange(el: HTMLElement): void {

@@ -14,7 +14,12 @@ export const problemaSolucao: Layout = {
   id: "problema-solucao",
   name: "Problema → Solução",
   description: "Arco clássico em 3 slides: dor, dados, proposta.",
+  format: "carousel",
   category: "narrativo",
+  defaultTypography: {
+    heading: { family: "DynaPuff", weight: 700 },
+    body: { family: "Inter", weight: 400 },
+  },
 
   slides: [
     // ===== SLIDE 1: PROBLEMA =====
@@ -188,14 +193,14 @@ export const problemaSolucao: Layout = {
 
     .ps-middle { flex: 1; display: flex; flex-direction: column; justify-content: center; z-index: 1; padding: 60px 0; }
     .ps-eyebrow {
-      font-family: var(--font-brand);
+      font-family: var(--font-heading);
       font-weight: 500;
       font-size: 39px;
       color: var(--orange);
       margin-bottom: 36px;
     }
     .ps-headline {
-      font-family: var(--font-brand);
+      font-family: var(--font-heading);
       font-weight: 600;
       font-size: 90px;
       line-height: 1.1;
@@ -213,7 +218,7 @@ export const problemaSolucao: Layout = {
     }
     .ps-bottom { display: flex; align-items: center; justify-content: space-between; z-index: 2; }
     .ps-swipe {
-      font-family: var(--font-brand);
+      font-family: var(--font-heading);
       font-size: 36px;
       color: var(--ink);
       opacity: 0.6;
@@ -224,7 +229,7 @@ export const problemaSolucao: Layout = {
     .frame-ps-2 { justify-content: flex-start; }
     .frame-ps-2 .top { display: flex; justify-content: space-between; align-items: center; }
     .ps-title {
-      font-family: var(--font-brand);
+      font-family: var(--font-heading);
       font-weight: 600;
       font-size: 66px;
       color: var(--ink);
@@ -245,7 +250,7 @@ export const problemaSolucao: Layout = {
     }
     .ps-stat:last-of-type { border-bottom: none; }
     .ps-stat .num {
-      font-family: var(--font-brand);
+      font-family: var(--font-heading);
       font-weight: 700;
       font-size: 96px;
       line-height: 1;
@@ -254,7 +259,7 @@ export const problemaSolucao: Layout = {
     }
     .ps-stat--positive .num { color: var(--olive); }
     .ps-stat .label {
-      font-family: var(--font-brand);
+      font-family: var(--font-heading);
       font-weight: 600;
       font-size: 42px;
       color: var(--ink);
@@ -291,7 +296,7 @@ export const problemaSolucao: Layout = {
       background: var(--orange);
       color: var(--white);
       border-radius: 60px;
-      font-family: var(--font-brand);
+      font-family: var(--font-heading);
       font-weight: 500;
       font-size: 33px;
       margin-bottom: 42px;
@@ -306,7 +311,7 @@ export const problemaSolucao: Layout = {
       border-top: 3px solid rgba(218,218,184,0.2);
       padding-top: 42px;
     }
-    .ps-cta { font-family: var(--font-brand); font-weight: 500; font-size: 36px; color: var(--bg); }
+    .ps-cta { font-family: var(--font-heading); font-weight: 500; font-size: 36px; color: var(--bg); }
     .ps-cta strong { font-weight: 700; color: var(--orange); }
   `,
 }

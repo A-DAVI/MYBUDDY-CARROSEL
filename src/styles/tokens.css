@@ -9,8 +9,10 @@
   --red: #C84A2E;
   --white: #FFFFFF;
 
-  --font-brand: 'DynaPuff', sans-serif;
+  --font-heading: 'DynaPuff', sans-serif;
+  --font-heading-weight: 600;
   --font-body: 'Inter', sans-serif;
+  --font-body-weight: 400;
 
   /* tons neutros do editor */
   --shell-bg: #2a2724;

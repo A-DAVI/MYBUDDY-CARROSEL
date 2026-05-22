@@ -1,9 +1,23 @@
 // Tipos centrais do sistema plugável de layouts.
 //
-// Um Layout descreve um carrossel: nome, descrição, e a lista de Slides.
+// Um Layout descreve um carrossel ou story: nome, descrição, e a lista de Slides.
 // Cada Slide tem fields (declarativos) e uma função render(state) → HTML string.
 // A sidebar do editor é gerada inteira a partir dos fields; o preview chama render
 // sempre que o estado muda.
+
+export type LayoutFormat = "carousel" | "story"
+
+export type FontWeight = 400 | 500 | 600 | 700
+
+export interface FontRole {
+  family: string
+  weight: FontWeight
+}
+
+export interface LayoutTypography {
+  heading: FontRole
+  body: FontRole
+}
 
 export type FieldType =
   | "text"
@@ -58,15 +72,16 @@ export interface Layout {
   id: string
   name: string
   description: string
+  format: LayoutFormat
   category?: string
-  thumbnail?: string                   // URL opcional; senão é gerado a partir do 1º slide
+  thumbnail?: string
   slides: Slide[]
   /**
-   * CSS específico do layout (string). Injetado em <style data-layout="..."> ao
-   * entrar no editor. Authore em px reais (frame é 1080×1350); o preview aplica
-   * transform: scale() externo.
+   * CSS específico do layout. Authore em px reais (1080×1350 carousel, 1080×1920 story).
+   * Injetado em <style data-layout-id="..."> ao entrar no editor.
    */
   styles?: string
+  defaultTypography: LayoutTypography
 }
 
 export interface ColorPalette {

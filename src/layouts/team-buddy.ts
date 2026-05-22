@@ -43,7 +43,12 @@ export const teamBuddy: Layout = {
   id: "team-buddy",
   name: "Conheça a TEAM BUDDY",
   description: "5 slides: capa + 4 membros do time MyBuddy.",
+  format: "carousel",
   category: "institucional",
+  defaultTypography: {
+    heading: { family: "DynaPuff", weight: 700 },
+    body: { family: "Inter", weight: 400 },
+  },
 
   slides: [
     // capa
@@ -138,14 +143,14 @@ export const teamBuddy: Layout = {
     }
     .tb-cover { flex: 1; display: flex; flex-direction: column; justify-content: center; z-index: 1; }
     .tb-cover-eyebrow {
-      font-family: var(--font-brand);
+      font-family: var(--font-heading);
       font-size: 42px;
       color: var(--ink);
       opacity: 0.7;
       margin-bottom: 18px;
     }
     .tb-cover-title {
-      font-family: var(--font-brand);
+      font-family: var(--font-heading);
       font-weight: 700;
       font-size: 180px;
       color: var(--orange);
@@ -154,14 +159,14 @@ export const teamBuddy: Layout = {
       margin-bottom: 36px;
     }
     .tb-cover-subtitle {
-      font-family: var(--font-brand);
+      font-family: var(--font-heading);
       font-size: 42px;
       color: var(--ink);
       opacity: 0.8;
     }
     .tb-bottom { z-index: 1; }
     .tb-bottom--cover { display: flex; justify-content: space-between; align-items: center; }
-    .tb-swipe { font-family: var(--font-brand); font-size: 36px; color: var(--ink); opacity: 0.6; }
+    .tb-swipe { font-family: var(--font-heading); font-size: 36px; color: var(--ink); opacity: 0.6; }
 
     /* membro */
     .frame-team-member { justify-content: space-between; }
@@ -180,7 +185,7 @@ export const teamBuddy: Layout = {
     .tb-photo-fallback { font-size: 120px; opacity: 0.4; }
     .tb-meta { text-align: center; }
     .tb-name {
-      font-family: var(--font-brand);
+      font-family: var(--font-heading);
       font-weight: 700;
       font-size: 84px;
       color: var(--ink);
@@ -188,7 +193,7 @@ export const teamBuddy: Layout = {
       margin-bottom: 12px;
     }
     .tb-role {
-      font-family: var(--font-brand);
+      font-family: var(--font-heading);
       font-size: 36px;
       color: var(--orange);
     }

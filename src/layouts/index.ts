@@ -11,12 +11,22 @@ import { problemaSolucao } from "./problema-solucao"
 import { apresentacao } from "./apresentacao"
 import { teamBuddy } from "./team-buddy"
 import { dadoDestaque } from "./dado-destaque"
+import { storyRapido } from "./stories/story-rapido"
+import { petAdocao } from "./stories/pet-adocao"
+import { voceSabia } from "./stories/voce-sabia"
+import { bastidores } from "./stories/bastidores"
 
 export const layouts: Layout[] = [
+  // carrosséis
   problemaSolucao,
   apresentacao,
   teamBuddy,
   dadoDestaque,
+  // stories
+  storyRapido,
+  petAdocao,
+  voceSabia,
+  bastidores,
 ]
 
 export function findLayout(id: string): Layout | undefined {

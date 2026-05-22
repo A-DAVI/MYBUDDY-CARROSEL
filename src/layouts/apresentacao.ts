@@ -9,7 +9,12 @@ export const apresentacao: Layout = {
   id: "apresentacao",
   name: "Apresentação institucional",
   description: "3 slides curtos: o que é, pra quem, por que existe.",
+  format: "carousel",
   category: "institucional",
+  defaultTypography: {
+    heading: { family: "DynaPuff", weight: 700 },
+    body: { family: "Inter", weight: 400 },
+  },
 
   slides: [
     {
@@ -145,14 +150,14 @@ export const apresentacao: Layout = {
       position: relative;
     }
     .apr-eyebrow {
-      font-family: var(--font-brand);
+      font-family: var(--font-heading);
       font-size: 42px;
       color: var(--ink);
       opacity: 0.7;
       margin-bottom: 18px;
     }
     .apr-brand {
-      font-family: var(--font-brand);
+      font-family: var(--font-heading);
       font-size: 180px;
       font-weight: 700;
       color: var(--orange);
@@ -161,7 +166,7 @@ export const apresentacao: Layout = {
       margin-bottom: 36px;
     }
     .apr-tagline {
-      font-family: var(--font-brand);
+      font-family: var(--font-heading);
       font-size: 48px;
       line-height: 1.25;
       color: var(--ink);
@@ -173,7 +178,7 @@ export const apresentacao: Layout = {
     /* slide 2 */
     .frame-apr-2 .top { display: flex; justify-content: space-between; align-items: center; }
     .apr-title {
-      font-family: var(--font-brand);
+      font-family: var(--font-heading);
       font-weight: 600;
       font-size: 72px;
       color: var(--ink);
@@ -189,7 +194,7 @@ export const apresentacao: Layout = {
       border-radius: 32px;
     }
     .apr-aud-emoji { font-size: 84px; line-height: 1; }
-    .apr-aud-label { font-family: var(--font-brand); font-weight: 500; font-size: 42px; color: var(--ink); }
+    .apr-aud-label { font-family: var(--font-heading); font-weight: 500; font-size: 42px; color: var(--ink); }
 
     /* slide 3 */
     .frame-apr-3 { justify-content: space-between; }
@@ -210,12 +215,12 @@ export const apresentacao: Layout = {
       background: var(--orange);
       color: var(--white);
       border-radius: 60px;
-      font-family: var(--font-brand);
+      font-family: var(--font-heading);
       font-size: 33px;
       margin-bottom: 48px;
     }
     .apr-manifesto {
-      font-family: var(--font-brand);
+      font-family: var(--font-heading);
       font-weight: 600;
       font-size: 96px;
       line-height: 1.15;
@@ -229,6 +234,6 @@ export const apresentacao: Layout = {
       padding-top: 42px;
       display: flex; justify-content: space-between; align-items: center;
     }
-    .apr-cta { font-family: var(--font-brand); font-weight: 500; font-size: 36px; color: var(--bg); }
+    .apr-cta { font-family: var(--font-heading); font-weight: 500; font-size: 36px; color: var(--bg); }
   `,
 }

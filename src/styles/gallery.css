@@ -8,11 +8,11 @@
 
 .gallery-head {
   text-align: center;
-  margin-bottom: 48px;
+  margin-bottom: 32px;
 }
 
 .gallery-head h1 {
-  font-family: var(--font-brand);
+  font-family: var(--font-heading);
   font-weight: 700;
   color: var(--orange);
   font-size: 40px;
@@ -23,6 +23,52 @@
   font-size: 14px;
   color: var(--shell-muted);
   letter-spacing: 0.04em;
+}
+
+/* ===== TABS ===== */
+.gallery-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 32px;
+  border-bottom: 1px solid var(--shell-border);
+  padding-bottom: 0;
+}
+
+.gallery-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--shell-muted);
+  font-family: var(--font-heading);
+  font-size: 15px;
+  font-weight: 500;
+  padding: 10px 18px 12px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: -1px;
+}
+
+.gallery-tab:hover { color: var(--shell-text); }
+
+.gallery-tab.active {
+  color: var(--orange);
+  border-bottom-color: var(--orange);
+}
+
+.tab-count {
+  font-size: 11px;
+  background: var(--shell-border);
+  color: var(--shell-muted);
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-weight: 400;
+}
+.gallery-tab.active .tab-count {
+  background: rgba(230, 126, 34, 0.15);
+  color: var(--orange);
 }
 
 .gallery-grid {
@@ -65,12 +111,20 @@
   padding: 16px;
   display: flex;
   justify-content: center;
+  /* altura fixa pra cards carousel: deixa story cards serem mais altos */
+  min-height: 120px;
+  align-items: center;
 }
 
-/* thumbnail: scale menor que o preview do editor */
+/* thumbnail carousel: scale 0.20, 1080×1350 → 216×270 */
 .layout-card .frame-scaler--thumb {
   --scale: 0.20;
   box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+}
+
+/* thumbnail story: scale 0.14, 1080×1920 → ~151×269 */
+.layout-card .frame-scaler--story-thumb {
+  --scale: 0.14;
 }
 
 .layout-card-meta {
@@ -88,7 +142,7 @@
 }
 
 .layout-card-meta h3 {
-  font-family: var(--font-brand);
+  font-family: var(--font-heading);
   font-weight: 600;
   color: var(--shell-text);
   font-size: 16px;
@@ -108,8 +162,29 @@
   line-height: 1.4;
 }
 
+.layout-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.layout-card-format {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--shell-muted);
+  background: var(--shell-border);
+  padding: 3px 8px;
+  border-radius: 10px;
+}
+
+.layout-card-format--story {
+  color: #7eb8f5;
+  background: rgba(126, 184, 245, 0.1);
+}
+
 .layout-card-tag {
-  align-self: flex-start;
   font-size: 9px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -117,7 +192,6 @@
   background: rgba(230, 126, 34, 0.1);
   padding: 3px 8px;
   border-radius: 10px;
-  margin-top: 4px;
 }
 
 @media (max-width: 600px) {

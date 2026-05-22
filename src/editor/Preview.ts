@@ -1,7 +1,6 @@
 // Renderiza os slides do layout ativo no container central.
 // Re-renderiza inteiro a cada mudança de estado — frames são HTML simples
-// em 1080×1350 com transform: scale() externo, então rerender é barato e evita
-// drift de estado entre patches.
+// em 1080×1350 (carousel) ou 1080×1920 (story) com transform: scale() externo.
 
 import type { Layout, RenderContext } from "../core/types"
 import type { LayoutStore } from "../core/state"
@@ -16,6 +15,7 @@ export class Preview {
 
   render(): void {
     const layout = this.store.layout
+    const isStory = layout.format === "story"
     const html: string[] = []
 
     for (let i = 0; i < layout.slides.length; i++) {
@@ -28,9 +28,22 @@ export class Preview {
         totalSlides: layout.slides.length,
       }
       const inner = slide.render(slideState, ctx)
+      const scalerCls = `frame-scaler${isStory ? " frame-scaler--story" : ""}`
+      const mountCls  = `frame-mount${isStory ? " frame-mount--story" : ""}`
+
+      // Safe zone overlays são siblings do .frame dentro do .frame-mount.
+      // html2canvas captura apenas o .frame, então elas não entram no export.
+      const safeZoneOverlays = isStory ? `
+        <div class="safe-overlay safe-overlay--top"></div>
+        <div class="safe-overlay safe-overlay--bottom"></div>
+      ` : ""
+
       html.push(`
-        <div class="frame-scaler" data-slide-index="${i}">
-          <div class="frame-mount" id="frame-mount-${i}">${inner}</div>
+        <div class="${scalerCls}" data-slide-index="${i}">
+          <div class="${mountCls}" id="frame-mount-${i}">
+            ${safeZoneOverlays}
+            ${inner}
+          </div>
         </div>
       `)
     }
@@ -44,7 +57,6 @@ export class Preview {
     return mount?.querySelector<HTMLElement>(".frame") ?? null
   }
 
-  /** Garantia: usa o layout do construtor. Útil pra exporter saber quantos slides existem. */
   get layout(): Layout {
     return this.store.layout
   }

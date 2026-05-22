@@ -1,33 +1,38 @@
 // Exporter PNG genérico — trabalha com qualquer Layout (N slides).
+// Carousel: 1080×1350 (4:5). Story: 1080×1920 (9:16).
 //
-// Estratégia: o .frame já é intrinsecamente 1080×1350. O preview só aplica
+// Estratégia: o .frame já é intrinsecamente no tamanho final. O preview aplica
 // transform: scale() externo. Pra exportar, desligamos o transform e capturamos.
-// Isso elimina o regime [data-exporting] e a duplicação de CSS preview/export.
 
 import html2canvas from "html2canvas"
 import JSZip from "jszip"
 import type { Layout } from "../core/types"
 import type { Preview } from "../editor/Preview"
 
-async function renderFrame(preview: Preview, index: number): Promise<HTMLCanvasElement> {
+function frameDims(layout: Layout): { w: number; h: number } {
+  return layout.format === "story"
+    ? { w: 1080, h: 1920 }
+    : { w: 1080, h: 1350 }
+}
+
+async function renderFrame(preview: Preview, layout: Layout, index: number): Promise<HTMLCanvasElement> {
   const frame = preview.frameAt(index)
   if (!frame) throw new Error(`frame ${index} não encontrado no DOM`)
 
-  // O wrapper .frame-scaler aplica o transform; o frame interno é 1080×1350.
-  const scaler = frame.closest<HTMLElement>(".frame-scaler")
-  const mount = frame.closest<HTMLElement>(".frame-mount")
-  const scalerOriginal = scaler?.style.cssText ?? ""
-  const mountOriginal = mount?.style.cssText ?? ""
+  const { w, h } = frameDims(layout)
 
-  // Move o scaler pra fora da viewport e remove o scale para o html2canvas
-  // pegar as dimensões reais sem cortes.
+  const scaler = frame.closest<HTMLElement>(".frame-scaler")
+  const mount  = frame.closest<HTMLElement>(".frame-mount")
+  const scalerOriginal = scaler?.style.cssText ?? ""
+  const mountOriginal  = mount?.style.cssText ?? ""
+
   if (scaler) {
     scaler.style.cssText = `
       position: absolute;
       top: -99999px;
       left: -99999px;
-      width: 1080px;
-      height: 1350px;
+      width: ${w}px;
+      height: ${h}px;
       transform: none;
     `
   }
@@ -37,49 +42,46 @@ async function renderFrame(preview: Preview, index: number): Promise<HTMLCanvasE
       position: absolute;
       top: 0;
       left: 0;
-      width: 1080px;
-      height: 1350px;
+      width: ${w}px;
+      height: ${h}px;
       transform: none;
     `
   }
 
-  // espera browser repintar + fontes carregadas (DynaPuff via CDN)
   await new Promise(r => setTimeout(r, 200))
 
   try {
     return await html2canvas(frame, {
-      width: 1080,
-      height: 1350,
+      width: w,
+      height: h,
       scale: 1,
       backgroundColor: null,
       useCORS: true,
       logging: false,
-      windowWidth: 1080,
-      windowHeight: 1350,
-      // ignora elementos marcados (ex: label "01 · problema") que não devem entrar na arte final
+      windowWidth: w,
+      windowHeight: h,
       ignoreElements: (el: Element) => el instanceof HTMLElement && el.dataset.noExport === "",
     })
   } finally {
     if (scaler) scaler.style.cssText = scalerOriginal
-    if (mount) mount.style.cssText = mountOriginal
+    if (mount)  mount.style.cssText  = mountOriginal
   }
 }
 
 function filename(layout: Layout, index: number): string {
   const slide = layout.slides[index]
-  return `mybuddy-${layout.id}-slide-${index + 1}-${slide.id}.png`
+  return `mybuddy-${layout.id}-${layout.format}-${index + 1}-${slide.id}.png`
 }
 
 export async function exportFrame(preview: Preview, layout: Layout, index: number): Promise<void> {
-  const canvas = await renderFrame(preview, index)
+  const canvas = await renderFrame(preview, layout, index)
   download(canvas.toDataURL("image/png"), filename(layout, index))
 }
 
 export async function exportAll(preview: Preview, layout: Layout): Promise<void> {
   for (let i = 0; i < layout.slides.length; i++) {
-    const canvas = await renderFrame(preview, i)
+    const canvas = await renderFrame(preview, layout, i)
     download(canvas.toDataURL("image/png"), filename(layout, i))
-    // dá tempo do navegador processar o download anterior
     await new Promise(r => setTimeout(r, 400))
   }
 }
@@ -87,7 +89,7 @@ export async function exportAll(preview: Preview, layout: Layout): Promise<void>
 export async function exportZip(preview: Preview, layout: Layout): Promise<void> {
   const zip = new JSZip()
   for (let i = 0; i < layout.slides.length; i++) {
-    const canvas = await renderFrame(preview, i)
+    const canvas = await renderFrame(preview, layout, i)
     const base64 = canvas.toDataURL("image/png").split(",")[1]
     zip.file(filename(layout, i), base64, { base64: true })
     await new Promise(r => setTimeout(r, 200))
