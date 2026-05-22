@@ -52,16 +52,16 @@ export class Sidebar {
       </div>
 
       <div class="editor-section">
+        <h3>🔤 tipografia</h3>
+        ${this.renderTypographyPanel()}
+      </div>
+
+      <div class="editor-section">
         <h3>🎨 paleta da marca</h3>
         <div class="colors-grid" id="colors-grid">
           ${this.renderColorsGrid()}
         </div>
         <button class="link-btn" id="btn-reset-colors">restaurar paleta padrão</button>
-      </div>
-
-      <div class="editor-section">
-        <h3>🔤 tipografia</h3>
-        ${this.renderTypographyPanel()}
       </div>
 
       <div class="editor-section">

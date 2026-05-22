@@ -9,19 +9,24 @@ import { loadGoogleFont } from "./fontLoader"
 const CUSTOM_FONTS_KEY = "mybuddy-custom-fonts"
 
 // Fontes curadas — carregadas sob demanda ao abrir o dropdown.
+// Display/Rounded: vibe MyBuddy. Sans: modernas. Serif: editoriais. Mono: dev.
 export const CURATED_FONTS: { family: string; weights: FontWeight[] }[] = [
-  { family: "DynaPuff", weights: [400, 500, 600, 700] },
-  { family: "Inter", weights: [400, 500, 600, 700] },
-  { family: "Poppins", weights: [400, 500, 600, 700] },
-  { family: "Nunito", weights: [400, 500, 600, 700] },
-  { family: "Raleway", weights: [400, 500, 600, 700] },
-  { family: "Playfair Display", weights: [400, 500, 600, 700] },
-  { family: "Merriweather", weights: [400, 700] },
-  { family: "Oswald", weights: [400, 500, 600, 700] },
-  { family: "Bebas Neue", weights: [400] },
-  { family: "Montserrat", weights: [400, 500, 600, 700] },
-  { family: "Lato", weights: [400, 700] },
-  { family: "Source Sans 3", weights: [400, 600, 700] },
+  // Display / Rounded
+  { family: "DynaPuff",          weights: [400, 500, 600, 700] },
+  { family: "Fredoka",           weights: [400, 500, 600, 700] },
+  { family: "Baloo 2",           weights: [400, 500, 600, 700] },
+  { family: "Quicksand",         weights: [400, 500, 600, 700] },
+  // Sans-serif modernas
+  { family: "Inter",             weights: [400, 500, 600, 700] },
+  { family: "Plus Jakarta Sans", weights: [400, 500, 600, 700] },
+  { family: "Manrope",           weights: [400, 500, 600, 700] },
+  { family: "Outfit",            weights: [400, 500, 600, 700] },
+  // Serif editoriais
+  { family: "Fraunces",          weights: [400, 500, 600, 700] },
+  { family: "Playfair Display",  weights: [400, 500, 600, 700] },
+  // Mono
+  { family: "JetBrains Mono",    weights: [400, 500, 600, 700] },
+  { family: "Space Mono",        weights: [400, 700] },
 ]
 
 // ===== CustomFontRegistry =====

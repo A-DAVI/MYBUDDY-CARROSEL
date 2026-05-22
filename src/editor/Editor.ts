@@ -133,7 +133,10 @@ export class Editor {
     const btn = this.appRoot.querySelector<HTMLButtonElement>("#safe-zone-toggle")
     const previewHost = this.appRoot.querySelector<HTMLElement>("#preview-host")
     if (!btn || !previewHost) return
-    let active = false
+    // default: ligado — safe zones visíveis ao entrar no editor de story
+    let active = true
+    previewHost.classList.add("show-safe-zones")
+    btn.classList.add("active")
     btn.addEventListener("click", () => {
       active = !active
       previewHost.classList.toggle("show-safe-zones", active)

@@ -1,90 +1,112 @@
-# Testes manuais
+# Testes Manuais — MyBuddy Editor
 
-Checklist pra rodar ao mexer no editor. Não há suíte automatizada — esse é o
-contrato funcional do MVP.
+Execute `npm run dev` e siga os testes abaixo. Marque ✅ / ❌.
 
-## Setup
-
-```bash
-npm install
-npm run dev   # http://localhost:5173
-```
+---
 
 ## Galeria
 
-- [ ] Ao abrir `http://localhost:5173/` a galeria renderiza com **4 cards** (Problema→Solução, Apresentação, TEAM BUDDY, Dado em destaque).
-- [ ] Cada card mostra um **thumbnail** com o 1º slide em mini-escala, o nome, contagem de slides e descrição.
-- [ ] Click num card abre o editor daquele layout (URL passa a `#/editor/problema-solucao` etc.).
-- [ ] Refresh na rota `#/editor/<id>` mantém a tela de edição.
-- [ ] Acessar `#/editor/inexistente` mostra a tela "ops..." com botão de voltar.
+- [ ] Galeria carrega com aba **Carrossel** ativa por padrão
+- [ ] Aba **Carrossel** mostra 4 layouts (Problema→Solução, Apresentação, Team Buddy, Dado em destaque)
+- [ ] Aba **Stories** mostra 4 layouts (Story rápido, Pet pra adoção, Você sabia?, Bastidores)
+- [ ] Thumbnails de carousel têm proporção ~4:5; thumbnails de story têm proporção ~9:16
+- [ ] Cada card mostra badge de formato ("carrossel 4:5" ou "story 9:16")
+- [ ] Clicar num card navega pro editor daquele layout
+- [ ] Navegação pelo teclado (Enter/Space no card) funciona
 
-## Editor — comum a todos os layouts
+---
 
-- [ ] Sidebar mostra: link "← galeria", nome do layout, sessão (export/import/reset), paleta da marca, handle, e uma seção por slide.
-- [ ] Cada seção de slide tem 1 input por field declarado, no formato correto (text → input, textarea → multiline, richtext → textarea + dica, image → drop-zone, etc.).
-- [ ] Click em "← galeria" volta pra galeria sem perder os dados (recarregar o layout depois deve restaurar os valores).
-- [ ] Editar qualquer texto atualiza o preview ao vivo (sem refresh).
-- [ ] Editar `richtext` com `{{palavra}}` renderiza `palavra` em laranja no preview.
-- [ ] Mudar cor da paleta atualiza TODOS os slides ao mesmo tempo.
-- [ ] Mudar handle atualiza o pill em todos os slides do layout.
-- [ ] Click em "resetar layout" volta os fields ao default e mantém paleta/handle.
-- [ ] Click em "restaurar paleta padrão" volta as 6 cores ao default da marca.
+## Editor — geral
 
-## Persistência
+- [ ] Sidebar abre com seções na ordem: sessão → tipografia → paleta → handle → slides → exportar
+- [ ] Editar qualquer campo de texto atualiza o preview em tempo real
+- [ ] Estado persiste ao recarregar a página (mesmo layout, mesmos valores)
+- [ ] "↩ resetar layout" limpa todos os campos pro padrão
+- [ ] Exportar config JSON baixa um arquivo `.json` válido
+- [ ] Importar config JSON restaura os campos
+- [ ] Botão "← galeria" volta pra tela inicial
+- [ ] Atalho **Ctrl+E** dispara exportação de todos os frames
 
-- [ ] Editar um campo, dar F5 — valor persiste.
-- [ ] Editar layout A, voltar pra galeria, abrir layout B, voltar pro A — valores do A persistem (estado por-layout).
-- [ ] Editar paleta no layout A, abrir layout B — paleta continua editada (compartilhada).
+---
 
-## Imagens
+## Editor — tipografia
 
-- [ ] Click na drop-zone abre o file picker; selecionar imagem aplica no preview.
-- [ ] Arrastar imagem pra drop-zone tem o mesmo efeito.
-- [ ] Imagem < 800×800 dispara alerta de qualidade.
-- [ ] Botão "remover imagem" aparece após upload e funciona.
+- [ ] Seção "🔤 Tipografia" aparece **acima** da seção de paleta
+- [ ] Dropdown de família mostra as 12 fontes curadas: DynaPuff, Fredoka, Baloo 2, Quicksand, Inter, Plus Jakarta Sans, Manrope, Outfit, Fraunces, Playfair Display, JetBrains Mono, Space Mono
+- [ ] Mudar fonte Heading atualiza preview (títulos mudam de fonte)
+- [ ] Mudar fonte Body atualiza preview (textos de apoio mudam de fonte)
+- [ ] "carregar prévia das fontes" dispara preload (sem erro no console)
+- [ ] "+ fonte custom" mostra formulário inline
+- [ ] Adicionar "Pacifico" (fonte real): aparece nos dropdowns e aplica no preview
+- [ ] Adicionar "FonteQueNaoExiste": mostra alerta de erro
+- [ ] "restaurar padrão" volta pra DynaPuff/Inter
+- [ ] Tipografia persiste entre reloads
+- [ ] Mudar tipografia num layout não afeta outro layout
 
-## Export
+---
 
-- [ ] Click em "baixar todos" baixa N PNGs (N = nº de slides do layout) em 1080×1350.
-- [ ] Click em "baixar ZIP" baixa um único `.zip` com todos os PNGs nomeados como `mybuddy-${layoutId}-slide-N-${slideId}.png`.
-- [ ] Click num botão de slide específico baixa só aquele PNG.
-- [ ] Atalho `Ctrl+E` faz o mesmo que "baixar todos".
-- [ ] Abrir o PNG exportado: o conteúdo deve estar nítido (sem borrão), sem sombras de preview, com 1080×1350px.
+## Editor — paleta
 
-## Layouts específicos
+- [ ] Mudar cor de "laranja" atualiza todos os elementos com var(--orange) nos slides
+- [ ] "restaurar paleta padrão" volta pras cores MyBuddy originais
+- [ ] Paleta persiste entre reloads
 
-### Problema → Solução (3 slides)
-- [ ] Slide 1 tem campo de imagem circular (opcional).
-- [ ] Slide 2 mostra 3 estatísticas; a 3ª (positiva) aparece em verde olive.
-- [ ] Slide 3 tem fundo verde olive, CTA com `siga e <strong>X</strong>`.
+---
 
-### Apresentação institucional (3 slides)
-- [ ] Slide 1 tem marca em DynaPuff gigante laranja.
-- [ ] Slide 2 lista 3 públicos com emoji + label.
-- [ ] Slide 3 tem manifesto com {{palavra}} destacada em laranja sobre fundo olive.
+## Editor — imagens
 
-### Conheça a TEAM BUDDY (5 slides)
-- [ ] 1ª capa, 4 slides de membro (Eder, Davi, Daniel, Julia).
-- [ ] Cada membro tem foto circular com borda laranja, nome, função, fato pessoal.
-- [ ] Sem foto: placeholder de câmera 📷 aparece.
+- [ ] Upload via clique na drop-zone funciona
+- [ ] Upload via drag & drop funciona
+- [ ] Imagem menor que 800×800 dispara alerta de aviso
+- [ ] "remover imagem" limpa o field
 
-### Dado em destaque (1 slide)
-- [ ] Número gigante (~360px) em vermelho dado.
-- [ ] Só esse layout tem 1 slide — botão "baixar ZIP" mostra "1 slide".
+---
 
-## Adicionando um 5º layout (teste do contrato plugável)
+## Editor — carousel (1080×1350)
 
-1. Crie `src/layouts/teste.ts` (copie problema-solucao.ts como base, mude o id e nome).
-2. Adicione `import { teste } from "./teste"` em `src/layouts/index.ts`.
-3. Adicione `teste,` no array `layouts`.
-4. Reload da página.
-- [ ] Galeria mostra o 5º card.
-- [ ] Click abre o editor com sidebar gerada automaticamente.
-- [ ] Export funciona sem código adicional.
+- [ ] Preview mostra slides em escala (internamente 1080×1350)
+- [ ] Export individual: PNG em 1080×1350 (verificar com Preview do macOS)
+- [ ] Export "baixar todos": um PNG por slide
+- [ ] Export ZIP: arquivo .zip com todos os PNGs
+- [ ] Frame label ("01 · problema") aparece no editor mas NÃO no PNG exportado
 
-> ✅ critério de sucesso da arquitetura: nenhum outro arquivo precisou ser tocado.
+---
 
-## Responsivo
+## Editor — story (1080×1920)
 
-- [ ] Largura < 768px: sidebar vira drawer; botão hambúrguer abre/fecha; preview scroll horizontal.
-- [ ] Largura < 480px: frames escalam ainda menor; tudo continua legível.
+- [ ] Editor de story mostra botão "🛡 safe zone" no header
+- [ ] Safe zones estão **ligadas por padrão** ao entrar num layout de story
+- [ ] Overlay listrado laranja cobre ~250px no topo e ~400px na base
+- [ ] Clicar em "🛡 safe zone" oculta o overlay; clicar de novo mostra
+- [ ] Export individual: PNG em 1080×1920
+- [ ] Safe zone overlay NÃO aparece no PNG exportado
+- [ ] Export ZIP funciona com stories multi-frame
+
+---
+
+## Layouts de Story — visual
+
+### Story rápido (1 frame)
+- [ ] Eyebrow, headline e CTA editáveis e visíveis no preview
+- [ ] {{palavra}} no headline vira span laranja
+
+### Pet pra adoção (1 frame)
+- [ ] Foto ocupa área de foto corretamente; sem foto mostra placeholder 📷
+- [ ] Badge, nome, raça e descrição editáveis
+
+### Você sabia? (2 frames)
+- [ ] Frame 1: fundo verde escuro, texto claro
+- [ ] Frame 2: número gigante vermelho, fundo sage
+- [ ] Ambos exportam corretamente separados
+
+### Bastidores (3 frames)
+- [ ] Frame 1: foto fullscreen com overlay gradiente
+- [ ] Frame 2: fundo sage, texto da história
+- [ ] Frame 3: fundo oliva, headline grande + CTA
+
+---
+
+## Build
+
+- [ ] `npm run build` completa sem erros
+- [ ] `dist/index.html` abrível direto no browser sem servidor
