@@ -9,7 +9,7 @@ import { renderField, bindImageFields } from "./fields"
 import { renderColorField } from "./fields/ColorField"
 import { esc } from "../core/template"
 
-// IDs únicos por slide+field. Encoded em data-attributes pra recuperar no listener.
+// ID do input: só precisa ser único dentro da sidebar.
 function inputIdFor(slideId: string, fieldId: string): string {
   return `f-${slideId}-${fieldId}`
 }
@@ -113,8 +113,9 @@ export class Sidebar {
       return renderField(f, v, inputIdFor(slide.id, f.id))
     }).join("")
 
+    // data-slide-id é lido pelos listeners pra saber a qual slide pertence o input.
     return `
-      <div class="editor-section">
+      <div class="editor-section" data-slide-id="${esc(slide.id)}">
         <h3><span class="num">${index + 1}</span> ${esc(slide.label)}</h3>
         ${fields}
       </div>
@@ -146,24 +147,22 @@ export class Sidebar {
     handleInput?.addEventListener("input", () => handle.set(handleInput.value))
 
     // fields dos slides — text/textarea/richtext/select
-    this.root.querySelectorAll<HTMLElement>("[data-field]").forEach(el => {
+    // Lê data-field (fieldId) e sobe ao [data-slide-id] mais próximo (slideId).
+    this.root.querySelectorAll<HTMLElement>("[data-slide-id] [data-field]").forEach(el => {
       if (el.tagName === "INPUT" && (el as HTMLInputElement).type === "color") return
       if (el.tagName === "INPUT" && (el as HTMLInputElement).type === "file") return
       el.addEventListener("input", () => this.handleFieldChange(el))
-      // <select> não dispara input em todos os browsers — usa change também
       el.addEventListener("change", () => this.handleFieldChange(el))
     })
 
-    // image fields
+    // image fields — slideId e fieldId vêm diretamente do DOM (via data-slide-id e data-field)
     bindImageFields(
       this.root,
-      (inputId, dataUrl) => {
-        const { slideId, fieldId } = this.parseInputId(inputId)
+      (slideId, fieldId, dataUrl) => {
         this.store.setField(slideId, fieldId, dataUrl)
-        this.render() // re-render pra atualizar o estado da drop-zone (filled)
+        this.render()
       },
-      inputId => {
-        const { slideId, fieldId } = this.parseInputId(inputId)
+      (slideId, fieldId) => {
         this.store.setField(slideId, fieldId, "")
         this.render()
       },
@@ -192,28 +191,10 @@ export class Sidebar {
 
   private handleFieldChange(el: HTMLElement): void {
     const fieldId = el.dataset.field!
-    const slideId = this.parseInputId(el.id).slideId
+    const section = el.closest<HTMLElement>("[data-slide-id]")
+    const slideId = section?.dataset.slideId ?? ""
     const value = (el as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement).value
     this.store.setField(slideId, fieldId, value)
-  }
-
-  private parseInputId(inputId: string): { slideId: string; fieldId: string } {
-    // Formato: f-${slideId}-${fieldId}
-    // slideId pode ter hífens (ex: "o-que-e"); então tirando o prefixo "f-",
-    // o último segmento depois do último "-" não é seguro como fieldId. Em vez disso,
-    // recuperamos pelo data-field do elemento sempre que possível, e o slideId vem
-    // como prefixo conhecido. Aqui: derivamos slideId por substring.
-    const stripped = inputId.replace(/^f-/, "")
-    // procuramos qual slide tem um field cujo id está no final
-    for (const slide of this.store.layout.slides) {
-      for (const f of slide.fields) {
-        if (stripped === `${slide.id}-${f.id}`) {
-          return { slideId: slide.id, fieldId: f.id }
-        }
-      }
-    }
-    // fallback (não deveria acontecer)
-    return { slideId: "", fieldId: stripped }
   }
 
   private async wrapExport(fn: () => Promise<void> | void): Promise<void> {

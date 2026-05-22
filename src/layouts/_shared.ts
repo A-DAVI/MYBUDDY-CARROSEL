@@ -37,6 +37,6 @@ export function frameLabel(ctx: RenderContext, label: string): string {
 /** Estilo background-image inline a partir de um data URL (ou vazio). */
 export function bgImage(dataUrl: string): string {
   if (!dataUrl) return ""
-  // dataUrl é base64 confiável (vem do FileReader local), mas escapar aspas mesmo assim
-  return `background-image:url(${JSON.stringify(dataUrl)});`
+  // base64 só contém [A-Za-z0-9+/=] — seguro dentro de url() sem aspas
+  return `background-image:url(${dataUrl});`
 }

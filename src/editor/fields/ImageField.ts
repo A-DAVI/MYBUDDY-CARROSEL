@@ -12,30 +12,39 @@ export function renderImageField(
   return `
     <div class="field field--image">
       <label>${esc(field.label)}</label>
-      <div class="drop-zone ${filled ? "filled" : ""}" data-image-input-id="${inputId}">
+      <div class="drop-zone ${filled ? "filled" : ""}" data-image-zone>
         <input type="file" id="${inputId}" data-field="${esc(field.id)}" accept="image/*" class="file-input">
         <span class="drop-hint">${filled ? "✓ imagem carregada — clique pra trocar" : "arraste ou clique para escolher"}</span>
       </div>
-      <button type="button" class="remove-img-btn" data-remove-image-for="${inputId}" ${filled ? "" : "hidden"}>remover imagem</button>
+      <button type="button" class="remove-img-btn" data-remove-image data-for-field="${esc(field.id)}" ${filled ? "" : "hidden"}>remover imagem</button>
       ${field.optional ? `<p class="field-hint">(opcional)</p>` : ""}
     </div>
   `
 }
 
-/** Anexa handlers de drag/drop/click no container raiz dado. */
+type ImageCallback = (slideId: string, fieldId: string, dataUrl: string) => void
+type RemoveCallback = (slideId: string, fieldId: string) => void
+
+/**
+ * Anexa handlers de drag/drop/click em todas as drop-zones do container.
+ * A seção pai deve ter o atributo data-slide-id para que o slideId seja lido.
+ */
 export function bindImageFields(
   root: HTMLElement,
-  onUpload: (inputId: string, dataUrl: string) => void,
-  onRemove: (inputId: string) => void,
+  onUpload: ImageCallback,
+  onRemove: RemoveCallback,
 ): void {
-  root.querySelectorAll<HTMLElement>(".drop-zone").forEach(zone => {
-    const inputId = zone.dataset.imageInputId!
+  root.querySelectorAll<HTMLElement>("[data-image-zone]").forEach(zone => {
     const fileInput = zone.querySelector<HTMLInputElement>(".file-input")
     if (!fileInput) return
 
+    const section = zone.closest<HTMLElement>("[data-slide-id]")
+    const slideId = section?.dataset.slideId ?? ""
+    const fieldId = fileInput.dataset.field ?? ""
+
     fileInput.addEventListener("change", e => {
       const file = (e.target as HTMLInputElement).files?.[0]
-      if (file) readFile(file, dataUrl => onUpload(inputId, dataUrl))
+      if (file) readFile(file, dataUrl => onUpload(slideId, fieldId, dataUrl))
     })
 
     zone.addEventListener("dragover", e => {
@@ -48,23 +57,20 @@ export function bindImageFields(
       zone.classList.remove("drag-over")
       const file = e.dataTransfer?.files[0]
       if (file && file.type.startsWith("image/")) {
-        readFile(file, dataUrl => onUpload(inputId, dataUrl))
+        readFile(file, dataUrl => onUpload(slideId, fieldId, dataUrl))
       }
     })
   })
 
-  root.querySelectorAll<HTMLButtonElement>("[data-remove-image-for]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const inputId = btn.dataset.removeImageFor!
-      const fileInput = document.getElementById(inputId) as HTMLInputElement | null
-      if (fileInput) fileInput.value = ""
-      onRemove(inputId)
-    })
+  root.querySelectorAll<HTMLButtonElement>("[data-remove-image]").forEach(btn => {
+    const section = btn.closest<HTMLElement>("[data-slide-id]")
+    const slideId = section?.dataset.slideId ?? ""
+    const fieldId = btn.dataset.forField ?? ""
+    btn.addEventListener("click", () => onRemove(slideId, fieldId))
   })
 }
 
 function readFile(file: File, cb: (dataUrl: string) => void): void {
-  // Alerta se a imagem for muito pequena — vai borrar no export 1080×1350.
   const url = URL.createObjectURL(file)
   const img = new Image()
   img.onload = () => {

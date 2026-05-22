@@ -43,8 +43,8 @@ async function renderFrame(preview: Preview, index: number): Promise<HTMLCanvasE
     `
   }
 
-  // espera o browser repintar
-  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
+  // espera browser repintar + fontes carregadas (DynaPuff via CDN)
+  await new Promise(r => setTimeout(r, 200))
 
   try {
     return await html2canvas(frame, {

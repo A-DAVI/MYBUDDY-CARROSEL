@@ -9,7 +9,6 @@
 import type { Layout } from "../core/types"
 import { layouts } from "../layouts"
 import { renderLayoutCard } from "./LayoutCard"
-import { esc } from "../core/template"
 
 const GALLERY_STYLE_TAG_ID = "gallery-layout-styles"
 
@@ -73,5 +72,3 @@ export class Gallery {
   }
 }
 
-// evita unused import quando o módulo é importado só pelo side-effect
-void esc
