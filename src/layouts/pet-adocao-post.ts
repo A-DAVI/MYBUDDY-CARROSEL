@@ -3,14 +3,17 @@
 //
 // Como funciona o "flexível 1-5 pets":
 //   - Os 5 slots de pet sempre aparecem na sidebar pra edição
-//   - Mas o usuário pode deixar slots sem preencher (vazio = renderiza estado vazio)
-//   - Pra omitir pets, basta não preencher (continuam no carrossel mas visíveis)
-//   - Se quiser exportar só os preenchidos, pula manualmente os botões no exporter
+//   - Slot com nome vazio mostra estado placeholder ("preencha as infos...")
+//   - Na hora de exportar, você escolhe os slides que quer baixar
 //
 // Estilo visual: foto domina ~60% do slide (810px de 1350), texto embaixo.
+//
+// IMPORTANTE: nunca aninhe html`...` dentro de outro html`...` — a interna
+// vira string e a externa escapa. Em vez disso, use html.raw() ou construa
+// fragmentos de string e injete via html.raw().
 
-import type { Layout } from "../core/types"
-import { html, richText } from "../core/template"
+import type { Layout, SlideState, RenderContext } from "../core/types"
+import { html, richText, esc } from "../core/template"
 import { topBar, handlePill, frameLabel, bgImage } from "./_shared"
 
 // ─── helper: monta um slide de pet ─────────────────────────────────────────
@@ -69,13 +72,29 @@ function buildPetSlide(index: number) {
         optional: true,
       },
     ],
-    render: (s: Record<string, string>, ctx: any): string => {
+    render: (s: SlideState, ctx: RenderContext): string => {
       const hasContent = (s.name ?? "").trim().length > 0
-      // tags de info — só renderiza as preenchidas
-      const tags: string[] = []
-      if (s.age) tags.push(`<span class="pap-tag">${s.age}</span>`)
-      if (s.size) tags.push(`<span class="pap-tag">${s.size}</span>`)
-      if (s.temperament) tags.push(`<span class="pap-tag pap-tag--accent">${s.temperament}</span>`)
+
+      // monta as tags de info como string (já escapadas)
+      const tagParts: string[] = []
+      if (s.age) tagParts.push(`<span class="pap-tag">${esc(s.age)}</span>`)
+      if (s.size) tagParts.push(`<span class="pap-tag">${esc(s.size)}</span>`)
+      if (s.temperament) tagParts.push(`<span class="pap-tag pap-tag--accent">${esc(s.temperament)}</span>`)
+      const tagsHtml = tagParts.length ? `<div class="pap-tags">${tagParts.join("")}</div>` : ""
+
+      // monta o bloco de contato
+      const orgHtml = s.org
+        ? `<div class="pap-org"><span class="pap-org-label">contato</span><span class="pap-org-value">${esc(s.org)}</span></div>`
+        : ""
+
+      // monta o conteúdo do card (preenchido ou estado vazio)
+      const contentHtml = hasContent
+        ? `<h2 class="pap-name">${esc(s.name)}</h2>${tagsHtml}${orgHtml}`
+        : `<p class="pap-empty">preencha as infos do pet ${index} ao lado →</p>`
+
+      const placeholderHtml = s.photo
+        ? ""
+        : `<span class="pap-photo-placeholder">📷<br><small>foto do pet</small></span>`
 
       return html`
         ${html.raw(frameLabel(ctx, `pet ${index}`))}
@@ -83,25 +102,11 @@ function buildPetSlide(index: number) {
           ${html.raw(topBar(ctx))}
 
           <div class="pap-photo ${s.photo ? "has-image" : ""}" style="${html.raw(bgImage(s.photo))}">
-            ${s.photo ? "" : html.raw('<span class="pap-photo-placeholder">📷<br><small>foto do pet</small></span>')}
+            ${html.raw(placeholderHtml)}
           </div>
 
           <div class="pap-content">
-            ${hasContent
-              ? html`
-                <h2 class="pap-name">${s.name}</h2>
-                ${tags.length ? html.raw(`<div class="pap-tags">${tags.join("")}</div>`) : ""}
-                ${s.org
-                  ? html`
-                    <div class="pap-org">
-                      <span class="pap-org-label">contato</span>
-                      <span class="pap-org-value">${s.org}</span>
-                    </div>
-                  `
-                  : ""}
-              `
-              : html`<p class="pap-empty">preencha as infos do pet ${index} ao lado →</p>`
-            }
+            ${html.raw(contentHtml)}
           </div>
 
           <div class="pap-bottom">
@@ -150,21 +155,27 @@ export const petAdocaoPost: Layout = {
           optional: true,
         },
       ],
-      render: (s, ctx) => html`
-        ${html.raw(frameLabel(ctx, "capa"))}
-        <div class="frame frame-pap-cover">
-          ${html.raw(topBar(ctx))}
-          <div class="pap-cover-content">
-            <p class="pap-eyebrow">${s.eyebrow}</p>
-            <h1 class="pap-headline">${html.raw(richText(s.headline))}</h1>
-            ${s.subline ? html`<p class="pap-subline">${s.subline}</p>` : ""}
+      render: (s, ctx) => {
+        const sublineHtml = s.subline
+          ? `<p class="pap-subline">${esc(s.subline)}</p>`
+          : ""
+
+        return html`
+          ${html.raw(frameLabel(ctx, "capa"))}
+          <div class="frame frame-pap-cover">
+            ${html.raw(topBar(ctx))}
+            <div class="pap-cover-content">
+              <p class="pap-eyebrow">${s.eyebrow}</p>
+              <h1 class="pap-headline">${html.raw(richText(s.headline))}</h1>
+              ${html.raw(sublineHtml)}
+            </div>
+            <div class="pap-bottom">
+              ${html.raw(handlePill(ctx))}
+              <span class="pap-swipe">arraste →</span>
+            </div>
           </div>
-          <div class="pap-bottom">
-            ${html.raw(handlePill(ctx))}
-            <span class="pap-swipe">arraste →</span>
-          </div>
-        </div>
-      `,
+        `
+      },
     },
 
     // ─── 5 SLOTS DE PET ────────────────────────────────────────────────
