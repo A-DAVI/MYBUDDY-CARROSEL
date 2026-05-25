@@ -26,20 +26,57 @@ const LAYOUT_ID = "pet-adocao-post"
 const PHOTO_W = 1080
 const PHOTO_H = 810
 
-// ─── lê quantos pets estão ativos (do LayoutStore via localStorage) ─────
-// O LayoutStore salva tudo em `mybuddy-editor:${layoutId}`. A gente lê esse
-// JSON direto pra saber o `count` atual sem precisar passar pelo render context.
+// ─── lê quantos pets estão ativos ─────────────────────────────
+// Estratégia: lê PRIMEIRO de uma variável em memória (atualizada por um listener
+// de mudanças nos <select>), com fallback pro localStorage. Isso evita o bug do
+// localStorage cheio (quando tem imagens base64 grandes, o write() falha
+// silenciosamente e o read pega valor antigo).
+let activeCountInMemory: number | null = null
+
+// Listener global no document pra capturar mudanças no select do count.
+// Setup uma vez (idempotente). Não depende do LayoutStore.
+let countListenerSetup = false
+function setupCountListener(): void {
+  if (countListenerSetup) return
+  countListenerSetup = true
+  document.addEventListener("change", (e) => {
+    const t = e.target as HTMLElement
+    if (t.tagName !== "SELECT") return
+    if ((t as HTMLSelectElement).dataset.field !== "count") return
+    const section = t.closest<HTMLElement>("[data-slide-id]")
+    if (section?.dataset.slideId !== "cover") return
+    const n = parseInt((t as HTMLSelectElement).value, 10)
+    if (isFinite(n) && n >= 1 && n <= 5) {
+      activeCountInMemory = n
+    }
+  })
+}
+
 function readActiveCount(): number {
+  // 1ª fonte: memória (mais confiável)
+  if (activeCountInMemory !== null) return activeCountInMemory
+  // 2ª fonte: DOM (lê o select direto se estiver renderizado)
+  const selectInDom = document.querySelector<HTMLSelectElement>(
+    `[data-slide-id="cover"] select[data-field="count"]`
+  )
+  if (selectInDom) {
+    const n = parseInt(selectInDom.value, 10)
+    if (isFinite(n) && n >= 1 && n <= 5) {
+      activeCountInMemory = n
+      return n
+    }
+  }
+  // 3ª fonte: localStorage (pode estar desatualizado se cheio)
   try {
     const raw = localStorage.getItem(`mybuddy-editor:${LAYOUT_ID}`)
-    if (!raw) return 5
-    const parsed = JSON.parse(raw)
-    const count = parsed?.cover?.count
-    const n = parseInt(count, 10)
-    return isFinite(n) && n >= 1 && n <= 5 ? n : 5
-  } catch {
-    return 5
-  }
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      const count = parsed?.cover?.count
+      const n = parseInt(count, 10)
+      if (isFinite(n) && n >= 1 && n <= 5) return n
+    }
+  } catch {}
+  return 3 // default final
 }
 
 // total de slides ativos = capa + N pets + CTA
@@ -270,10 +307,12 @@ if (typeof document !== "undefined") {
     document.addEventListener("DOMContentLoaded", () => {
       setupInteractions()
       setupCropReapplication()
+      setupCountListener()
     })
   } else {
     setupInteractions()
     setupCropReapplication()
+    setupCountListener()
   }
 }
 
