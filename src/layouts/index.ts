@@ -11,6 +11,7 @@ import { problemaSolucao } from "./problema-solucao"
 import { apresentacao } from "./apresentacao"
 import { teamBuddy } from "./team-buddy"
 import { dadoDestaque } from "./dado-destaque"
+import { petAdocaoPost } from "./pet-adocao-post"
 import { storyRapido } from "./stories/story-rapido"
 import { petAdocao } from "./stories/pet-adocao"
 import { voceSabia } from "./stories/voce-sabia"
@@ -22,6 +23,7 @@ export const layouts: Layout[] = [
   apresentacao,
   teamBuddy,
   dadoDestaque,
+  petAdocaoPost,
   // stories
   storyRapido,
   petAdocao,
