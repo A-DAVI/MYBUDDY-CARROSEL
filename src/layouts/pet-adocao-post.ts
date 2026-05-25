@@ -4,26 +4,25 @@
 // Foto domina ~60% do slide (810px de 1350), texto embaixo.
 //
 // ENQUADRAMENTO DA FOTO (drag + zoom):
-//   Cada slot de pet tem um crop ajustável. O usuário pode:
-//     • arrastar a imagem com o mouse pra reposicionar
-//     • rolar scroll pra dar zoom (100%-300%)
-//   O estado de crop é persistido no localStorage paralelo ao LayoutStore
-//   (chave própria desse layout) pra não poluir a sidebar com fields técnicos.
+//   Cada slot de pet tem um crop ajustável via <img> com transform.
+//   • drag = translate(x, y)
+//   • scroll = scale()
+//   Estado persistido em localStorage paralelo ao LayoutStore.
 //
 // IMPORTANTE: nunca aninhe html`...` dentro de outro html`...` — a interna
 // vira string e a externa escapa. Use html.raw() ou strings + esc().
 
 import type { Layout, SlideState, RenderContext } from "../core/types"
 import { html, richText, esc } from "../core/template"
-import { topBar, handlePill, frameLabel, bgImage } from "./_shared"
+import { topBar, handlePill, frameLabel } from "./_shared"
 
 // ─── crop state lateral (paralelo ao LayoutStore) ──────────────────────────
-// Guardado em localStorage com chave própria. Cada slot tem {x, y, zoom}.
-// x e y são percentuais 0-100 (background-position). zoom é 100-300 (%).
+// tx, ty em px (no espaço da imagem em 1080×810 — escala real)
+// scale = multiplicador (1.0 = "cover", 1.5 = 50% maior, etc)
 
-type CropState = { x: number; y: number; zoom: number }
+type CropState = { tx: number; ty: number; scale: number }
 const CROP_STORAGE_KEY = "mybuddy-editor:pet-adocao-post:crops"
-const DEFAULT_CROP: CropState = { x: 50, y: 50, zoom: 100 }
+const DEFAULT_CROP: CropState = { tx: 0, ty: 0, scale: 1 }
 
 function loadCrops(): Record<string, CropState> {
   try {
@@ -49,9 +48,13 @@ function setCrop(petKey: string, crop: CropState): void {
   saveCrops(all)
 }
 
+function applyCropToImg(img: HTMLImageElement, crop: CropState): void {
+  img.style.transform = `translate(${crop.tx}px, ${crop.ty}px) scale(${crop.scale})`
+}
+
 // ─── interação: drag + zoom ────────────────────────────────────────────────
-// Listeners globais delegados via document. Setup uma vez só (idempotente).
-// A re-render do Preview destrói os elementos, mas o listener fica no document.
+// Listeners delegados no document. Setup uma vez (idempotente).
+// O re-render do Preview destrói os elementos mas listeners ficam.
 
 let interactionSetup = false
 
@@ -60,89 +63,93 @@ function setupInteractions(): void {
   interactionSetup = true
 
   let dragging: {
-    el: HTMLElement
+    container: HTMLElement
+    img: HTMLImageElement
     petKey: string
-    startX: number
-    startY: number
-    startPosX: number
-    startPosY: number
+    startClientX: number
+    startClientY: number
+    startTx: number
+    startTy: number
+    /** Fator de escala visual: 1 px no preview = N px no espaço real da imagem */
+    scaleVisualToReal: number
   } | null = null
 
-  // mousedown na foto → começa drag
   document.addEventListener("mousedown", (e) => {
     const target = e.target as HTMLElement
-    const photo = target.closest<HTMLElement>(".pap-photo[data-pet-key]")
-    if (!photo || !photo.classList.contains("has-image")) return
+    const container = target.closest<HTMLElement>(".pap-photo[data-pet-key]")
+    if (!container) return
+    const img = container.querySelector<HTMLImageElement>(".pap-photo-img")
+    if (!img) return
 
-    const petKey = photo.dataset.petKey!
+    const petKey = container.dataset.petKey!
     const crop = getCrop(petKey)
+
+    // Preview é escalado via CSS transform na frame-scaler. Pra converter
+    // delta de mouse (em px na tela) → delta no espaço da imagem real,
+    // precisamos do fator de escala. Pega largura "real" (1080) vs largura
+    // renderizada na tela.
+    const rect = container.getBoundingClientRect()
+    const realWidth = container.offsetWidth // 1080 (sem transform aplicado)
+    const visualWidth = rect.width          // o que aparece na tela
+    const scaleVisualToReal = realWidth / visualWidth
+
     dragging = {
-      el: photo,
+      container,
+      img,
       petKey,
-      startX: e.clientX,
-      startY: e.clientY,
-      startPosX: crop.x,
-      startPosY: crop.y,
+      startClientX: e.clientX,
+      startClientY: e.clientY,
+      startTx: crop.tx,
+      startTy: crop.ty,
+      scaleVisualToReal,
     }
-    photo.style.cursor = "grabbing"
+    container.style.cursor = "grabbing"
     e.preventDefault()
   })
 
-  // mousemove → atualiza posição
   document.addEventListener("mousemove", (e) => {
     if (!dragging) return
-    const rect = dragging.el.getBoundingClientRect()
-    // dx/dy em px → converte pra delta percentual considerando o zoom.
-    // Quando zoom=100%, a imagem é do tamanho exato do container e não pode
-    // ser arrastada. Acima de 100%, o "excesso" é o que pode deslocar.
+    const dxVisual = e.clientX - dragging.startClientX
+    const dyVisual = e.clientY - dragging.startClientY
+    // converte pro espaço real da imagem
+    const dxReal = dxVisual * dragging.scaleVisualToReal
+    const dyReal = dyVisual * dragging.scaleVisualToReal
+
     const crop = getCrop(dragging.petKey)
-    const zoom = crop.zoom / 100
-    const dxPx = e.clientX - dragging.startX
-    const dyPx = e.clientY - dragging.startY
-    // Quanto a imagem é maior que o container (em px de overflow)
-    const overflowX = rect.width * (zoom - 1)
-    const overflowY = rect.height * (zoom - 1)
-    // Se não há overflow, drag não faz nada
-    if (overflowX <= 0 && overflowY <= 0) return
-
-    // Converte delta de px pra delta de % (0-100 da bg-position)
-    const newX = overflowX > 0
-      ? clamp(dragging.startPosX - (dxPx / overflowX) * 100, 0, 100)
-      : 50
-    const newY = overflowY > 0
-      ? clamp(dragging.startPosY - (dyPx / overflowY) * 100, 0, 100)
-      : 50
-
-    setCrop(dragging.petKey, { x: newX, y: newY, zoom: crop.zoom })
-    applyCropToElement(dragging.el, { x: newX, y: newY, zoom: crop.zoom })
+    const next: CropState = {
+      tx: dragging.startTx + dxReal,
+      ty: dragging.startTy + dyReal,
+      scale: crop.scale,
+    }
+    setCrop(dragging.petKey, next)
+    applyCropToImg(dragging.img, next)
   })
 
-  // mouseup → solta
   document.addEventListener("mouseup", () => {
     if (!dragging) return
-    dragging.el.style.cursor = ""
+    dragging.container.style.cursor = ""
     dragging = null
   })
 
-  // wheel → zoom (precisa de { passive: false } pra preventDefault funcionar)
   document.addEventListener(
     "wheel",
     (e) => {
       const target = e.target as HTMLElement
-      const photo = target.closest<HTMLElement>(".pap-photo[data-pet-key]")
-      if (!photo || !photo.classList.contains("has-image")) return
+      const container = target.closest<HTMLElement>(".pap-photo[data-pet-key]")
+      if (!container) return
+      const img = container.querySelector<HTMLImageElement>(".pap-photo-img")
+      if (!img) return
 
       e.preventDefault()
-      const petKey = photo.dataset.petKey!
+      const petKey = container.dataset.petKey!
       const crop = getCrop(petKey)
-      // Scroll pra baixo (deltaY > 0) = zoom out. Pra cima = zoom in.
-      const step = e.deltaY > 0 ? -10 : 10
-      const newZoom = clamp(crop.zoom + step, 100, 300)
-      const next = { ...crop, zoom: newZoom }
-      // Quando zoom volta pra 100%, força centro
-      if (newZoom === 100) { next.x = 50; next.y = 50 }
+      const step = e.deltaY > 0 ? -0.05 : 0.05
+      const newScale = clamp(crop.scale + step, 1, 3)
+      const next: CropState = { tx: crop.tx, ty: crop.ty, scale: newScale }
+      // se voltou pra 1, centraliza
+      if (newScale === 1) { next.tx = 0; next.ty = 0 }
       setCrop(petKey, next)
-      applyCropToElement(photo, next)
+      applyCropToImg(img, next)
     },
     { passive: false },
   )
@@ -152,35 +159,26 @@ function clamp(v: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, v))
 }
 
-function applyCropToElement(el: HTMLElement, crop: CropState): void {
-  el.style.backgroundPosition = `${crop.x}% ${crop.y}%`
-  el.style.backgroundSize = `${crop.zoom}% auto`
-}
-
-// Aplica crops salvos após cada render do preview (re-render destrói o DOM).
-// Listener pra mutações no preview-root garante reaplicação.
+// Re-aplica crops após cada render do preview.
 let observerSetup = false
 function setupCropReapplication(): void {
   if (observerSetup) return
   observerSetup = true
 
   const reapply = () => {
-    document.querySelectorAll<HTMLElement>(".pap-photo[data-pet-key]").forEach(el => {
-      const petKey = el.dataset.petKey!
-      const crop = getCrop(petKey)
-      if (crop.zoom > 100 || crop.x !== 50 || crop.y !== 50) {
-        applyCropToElement(el, crop)
-      }
+    document.querySelectorAll<HTMLImageElement>(".pap-photo-img").forEach(img => {
+      const container = img.closest<HTMLElement>(".pap-photo[data-pet-key]")
+      if (!container) return
+      const petKey = container.dataset.petKey!
+      applyCropToImg(img, getCrop(petKey))
     })
   }
 
-  // Observer no body — re-aplica sempre que o DOM mudar
   const obs = new MutationObserver(reapply)
   obs.observe(document.body, { childList: true, subtree: true })
   reapply()
 }
 
-// Inicia setup quando o módulo for importado (no boot do app)
 if (typeof document !== "undefined") {
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", () => {
@@ -207,22 +205,10 @@ function buildPetSlide(index: number) {
         shape: "rect" as const,
         optional: true,
         default: "",
-        hint: "após carregar, arraste a foto pra reposicionar e use scroll pra zoom",
+        hint: "arraste a foto pra reposicionar · scroll pra zoom",
       },
-      {
-        id: "name",
-        type: "text" as const,
-        label: `pet ${index} — nome`,
-        default: "",
-        optional: true,
-      },
-      {
-        id: "age",
-        type: "text" as const,
-        label: `pet ${index} — idade`,
-        default: "",
-        optional: true,
-      },
+      { id: "name", type: "text" as const, label: `pet ${index} — nome`, default: "", optional: true },
+      { id: "age", type: "text" as const, label: `pet ${index} — idade`, default: "", optional: true },
       {
         id: "size",
         type: "select" as const,
@@ -243,13 +229,7 @@ function buildPetSlide(index: number) {
         optional: true,
         hint: "ex: brincalhão, tímido, calmo",
       },
-      {
-        id: "org",
-        type: "text" as const,
-        label: `pet ${index} — ONG / contato`,
-        default: "",
-        optional: true,
-      },
+      { id: "org", type: "text" as const, label: `pet ${index} — ONG / contato`, default: "", optional: true },
     ],
     render: (s: SlideState, ctx: RenderContext): string => {
       const hasContent = (s.name ?? "").trim().length > 0
@@ -268,28 +248,23 @@ function buildPetSlide(index: number) {
         ? `<h2 class="pap-name">${esc(s.name)}</h2>${tagsHtml}${orgHtml}`
         : `<p class="pap-empty">preencha as infos do pet ${index} ao lado →</p>`
 
-      const placeholderHtml = s.photo
-        ? ""
-        : `<span class="pap-photo-placeholder">📷<br><small>foto do pet</small></span>`
-
-      // Aplica crop inicial inline (também é re-aplicado pelo observer)
-      const crop = s.photo ? getCrop(petKey) : DEFAULT_CROP
-      const cropStyle = s.photo
-        ? `background-position:${crop.x}% ${crop.y}%;background-size:${crop.zoom}% auto;`
-        : ""
+      // monta o conteúdo da área de foto: <img> escalável OU placeholder
+      let photoInner: string
+      if (s.photo) {
+        // Atributo src com data URL — esc() escaparia o ":" da URL, então uso atributo simples.
+        // Como data URL não contém aspas, é seguro inserir direto.
+        photoInner = `<img class="pap-photo-img" src="${s.photo}" alt="" draggable="false"/><div class="pap-photo-hint" data-no-export>arraste pra mover · scroll pra zoom</div>`
+      } else {
+        photoInner = `<span class="pap-photo-placeholder">📷<br><small>foto do pet</small></span>`
+      }
 
       return html`
         ${html.raw(frameLabel(ctx, `pet ${index}`))}
         <div class="frame frame-pap">
           ${html.raw(topBar(ctx))}
 
-          <div
-            class="pap-photo ${s.photo ? "has-image" : ""}"
-            data-pet-key="${petKey}"
-            style="${html.raw(bgImage(s.photo))}${html.raw(cropStyle)}"
-          >
-            ${html.raw(placeholderHtml)}
-            ${s.photo ? html.raw('<div class="pap-photo-hint" data-no-export>arraste pra mover · scroll pra zoom</div>') : ""}
+          <div class="pap-photo ${s.photo ? "has-image" : ""}" data-pet-key="${petKey}">
+            ${html.raw(photoInner)}
           </div>
 
           <div class="pap-content">
@@ -317,17 +292,11 @@ export const petAdocaoPost: Layout = {
   },
 
   slides: [
-    // ─── CAPA ──────────────────────────────────────────────────────────
     {
       id: "cover",
       label: "capa",
       fields: [
-        {
-          id: "eyebrow",
-          type: "text",
-          label: "olho (em cima do título)",
-          default: "pets esperando um lar",
-        },
+        { id: "eyebrow", type: "text", label: "olho (em cima do título)", default: "pets esperando um lar" },
         {
           id: "headline",
           type: "richtext",
@@ -343,10 +312,7 @@ export const petAdocaoPost: Layout = {
         },
       ],
       render: (s, ctx) => {
-        const sublineHtml = s.subline
-          ? `<p class="pap-subline">${esc(s.subline)}</p>`
-          : ""
-
+        const sublineHtml = s.subline ? `<p class="pap-subline">${esc(s.subline)}</p>` : ""
         return html`
           ${html.raw(frameLabel(ctx, "capa"))}
           <div class="frame frame-pap-cover">
@@ -365,14 +331,12 @@ export const petAdocaoPost: Layout = {
       },
     },
 
-    // ─── 5 SLOTS DE PET ────────────────────────────────────────────────
     buildPetSlide(1),
     buildPetSlide(2),
     buildPetSlide(3),
     buildPetSlide(4),
     buildPetSlide(5),
 
-    // ─── CTA FINAL ─────────────────────────────────────────────────────
     {
       id: "cta",
       label: "CTA final",
@@ -389,12 +353,7 @@ export const petAdocaoPost: Layout = {
           label: "texto de apoio",
           default: "entre em contato com a ONG do pet que você gostou. cada lar muda uma vida.",
         },
-        {
-          id: "cta",
-          type: "text",
-          label: "CTA",
-          default: "fale com a gente no direct",
-        },
+        { id: "cta", type: "text", label: "CTA", default: "fale com a gente no direct" },
       ],
       render: (s, ctx) => html`
         ${html.raw(frameLabel(ctx, "CTA"))}
@@ -429,47 +388,22 @@ export const petAdocaoPost: Layout = {
 
     /* ═══ CAPA ═══════════════════════════════════════════════════════ */
     .frame-pap-cover { justify-content: space-between; }
-    .pap-cover-content {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      gap: 30px;
-    }
+    .pap-cover-content { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 30px; }
     .pap-eyebrow {
-      font-family: var(--font-heading);
-      font-weight: 500;
-      color: var(--orange);
-      font-size: 42px;
-      letter-spacing: 0.01em;
+      font-family: var(--font-heading); font-weight: 500;
+      color: var(--orange); font-size: 42px; letter-spacing: 0.01em;
     }
     .pap-headline {
-      font-family: var(--font-heading);
-      font-weight: var(--font-heading-weight, 700);
-      color: var(--ink);
-      font-size: 120px;
-      line-height: 1.02;
-      letter-spacing: -0.02em;
+      font-family: var(--font-heading); font-weight: var(--font-heading-weight, 700);
+      color: var(--ink); font-size: 120px; line-height: 1.02; letter-spacing: -0.02em;
     }
     .pap-headline .accent { color: var(--orange); }
     .pap-subline {
-      font-size: 42px;
-      color: var(--ink);
-      opacity: 0.7;
-      line-height: 1.4;
-      max-width: 80%;
+      font-size: 42px; color: var(--ink); opacity: 0.7;
+      line-height: 1.4; max-width: 80%;
     }
-    .pap-bottom {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .pap-swipe {
-      font-family: var(--font-heading);
-      font-size: 33px;
-      color: var(--ink);
-      opacity: 0.5;
-    }
+    .pap-bottom { display: flex; justify-content: space-between; align-items: center; }
+    .pap-swipe { font-family: var(--font-heading); font-size: 33px; color: var(--ink); opacity: 0.5; }
 
     /* ═══ PET SLIDE ══════════════════════════════════════════════════ */
     .frame-pap { padding: 0; }
@@ -480,23 +414,33 @@ export const petAdocaoPost: Layout = {
       z-index: 10;
     }
 
-    /* foto domina ~60% do slide (810px de 1350) */
+    /* container da foto: 1080×810 (60% da altura do slide) */
     .pap-photo {
       width: 100%;
       height: 810px;
       background-color: var(--olive);
-      background-size: cover;
-      background-position: center;
-      background-repeat: no-repeat;
+      flex-shrink: 0;
+      position: relative;
+      overflow: hidden;
       display: flex;
       align-items: center;
       justify-content: center;
-      flex-shrink: 0;
-      position: relative;
     }
-    /* Cursor de grab só quando tem imagem (indica que dá pra arrastar) */
     .pap-photo.has-image { cursor: grab; }
     .pap-photo.has-image:active { cursor: grabbing; }
+
+    /* a <img> real, escalável via transform */
+    .pap-photo-img {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform-origin: center center;
+      user-select: none;
+      pointer-events: none; /* eventos vão pro container */
+      will-change: transform;
+    }
 
     .pap-photo-placeholder {
       font-size: 120px;
@@ -512,7 +456,7 @@ export const petAdocaoPost: Layout = {
       font-family: var(--font-body);
       opacity: 0.85;
     }
-    /* Hint visual que aparece no preview mas é excluído do export */
+
     .pap-photo-hint {
       position: absolute;
       bottom: 18px;
@@ -527,6 +471,7 @@ export const petAdocaoPost: Layout = {
       pointer-events: none;
       opacity: 0;
       transition: opacity 0.2s;
+      z-index: 5;
     }
     .pap-photo.has-image:hover .pap-photo-hint { opacity: 1; }
 
@@ -538,61 +483,30 @@ export const petAdocaoPost: Layout = {
       gap: 27px;
     }
     .pap-name {
-      font-family: var(--font-heading);
-      font-weight: var(--font-heading-weight, 700);
-      font-size: 108px;
-      color: var(--ink);
-      letter-spacing: -0.02em;
-      line-height: 1;
+      font-family: var(--font-heading); font-weight: var(--font-heading-weight, 700);
+      font-size: 108px; color: var(--ink); letter-spacing: -0.02em; line-height: 1;
     }
-    .pap-tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 15px;
-    }
+    .pap-tags { display: flex; flex-wrap: wrap; gap: 15px; }
     .pap-tag {
-      background: rgba(26,24,21,0.08);
-      color: var(--ink);
-      font-family: var(--font-heading);
-      font-weight: 500;
-      font-size: 33px;
-      padding: 12px 27px;
-      border-radius: 60px;
+      background: rgba(26,24,21,0.08); color: var(--ink);
+      font-family: var(--font-heading); font-weight: 500;
+      font-size: 33px; padding: 12px 27px; border-radius: 60px;
     }
-    .pap-tag--accent {
-      background: var(--orange);
-      color: var(--white);
-    }
-    .pap-org {
-      margin-top: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
+    .pap-tag--accent { background: var(--orange); color: var(--white); }
+    .pap-org { margin-top: auto; display: flex; flex-direction: column; gap: 6px; }
     .pap-org-label {
-      font-size: 27px;
-      color: var(--ink);
-      opacity: 0.5;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
+      font-size: 27px; color: var(--ink); opacity: 0.5;
+      text-transform: uppercase; letter-spacing: 0.1em;
     }
     .pap-org-value {
-      font-family: var(--font-heading);
-      font-weight: 600;
-      font-size: 45px;
-      color: var(--olive);
+      font-family: var(--font-heading); font-weight: 600;
+      font-size: 45px; color: var(--olive);
     }
     .pap-empty {
-      font-family: var(--font-heading);
-      font-size: 39px;
-      color: var(--ink);
-      opacity: 0.35;
-      font-style: italic;
+      font-family: var(--font-heading); font-size: 39px;
+      color: var(--ink); opacity: 0.35; font-style: italic;
     }
-
-    .frame-pap .pap-bottom {
-      padding: 0 84px 48px;
-    }
+    .frame-pap .pap-bottom { padding: 0 84px 48px; }
 
     /* ═══ CTA FINAL ══════════════════════════════════════════════════ */
     .frame-pap-cta {
@@ -619,40 +533,26 @@ export const petAdocaoPost: Layout = {
     }
     .frame-pap-cta > * { position: relative; z-index: 1; }
     .pap-cta-content {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      gap: 36px;
+      flex: 1; display: flex; flex-direction: column;
+      justify-content: center; gap: 36px;
     }
     .pap-cta-headline {
-      font-family: var(--font-heading);
-      font-weight: var(--font-heading-weight, 700);
-      color: var(--bg);
-      font-size: 108px;
-      line-height: 1.02;
-      letter-spacing: -0.02em;
+      font-family: var(--font-heading); font-weight: var(--font-heading-weight, 700);
+      color: var(--bg); font-size: 108px; line-height: 1.02; letter-spacing: -0.02em;
     }
     .pap-cta-headline .accent { color: var(--orange); }
     .pap-cta-body {
-      font-size: 42px;
-      color: var(--bg);
-      opacity: 0.9;
-      line-height: 1.4;
-      max-width: 88%;
+      font-size: 42px; color: var(--bg); opacity: 0.9;
+      line-height: 1.4; max-width: 88%;
     }
     .pap-cta-bottom {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      display: flex; justify-content: space-between; align-items: center;
       padding-top: 36px;
       border-top: 3px solid rgba(218,218,184,0.25);
     }
     .pap-cta-text {
-      font-family: var(--font-heading);
-      font-weight: 500;
-      font-size: 39px;
-      color: var(--bg);
+      font-family: var(--font-heading); font-weight: 500;
+      font-size: 39px; color: var(--bg);
     }
   `,
 }
