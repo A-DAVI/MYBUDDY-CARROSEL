@@ -28,7 +28,8 @@ export class Preview {
         totalSlides: layout.slides.length,
       }
       const inner = slide.render(slideState, ctx)
-      const scalerCls = `frame-scaler${isStory ? " frame-scaler--story" : ""}`
+      const isEmpty = !inner || inner.trim().length === 0
+      const scalerCls = `frame-scaler${isStory ? " frame-scaler--story" : ""}${isEmpty ? " frame-scaler--empty" : ""}`
       const mountCls  = `frame-mount${isStory ? " frame-mount--story" : ""}`
 
       // Safe zone overlays são siblings do .frame dentro do .frame-mount.

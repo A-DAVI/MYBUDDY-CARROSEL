@@ -393,6 +393,10 @@
 /* preview do editor: scale maior que a galeria */
 body[data-view="editor"] .frame-scaler { --scale: 0.32; }
 
+/* slides desativados (render() retorna string vazia) somem do layout — não
+   ocupam espaço nem geram container cinza vazio. */
+.frame-scaler--empty { display: none !important; }
+
 /* ===== TOGGLE SIDEBAR (mobile) ===== */
 .sidebar-toggle {
   display: none;
