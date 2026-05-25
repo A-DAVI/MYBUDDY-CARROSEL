@@ -17,7 +17,7 @@
 // IMPORTANTE: nunca aninhe html`...` dentro de outro html`...`. Use html.raw().
 
 import type { Layout, SlideState, RenderContext } from "../core/types"
-import { html, richText, esc } from "../core/template"
+import { richText, esc } from "../core/template"
 import { handlePill, frameLabel } from "./_shared"
 
 const LAYOUT_ID = "pet-adocao-post"
